@@ -10,91 +10,146 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
+      background-color: #f4f4f9;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
     input, button {
       margin: 10px;
       padding: 10px;
+      font-size: 16px;
+    }
+    label {
+      font-size: 18px;
+      margin-top: 10px;
     }
     #qrcode {
       margin-top: 20px;
+      display: inline-block;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #fff;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .slider {
+      width: 300px;
+      margin-top: 10px;
+    }
+    .logo-preview {
+      width: 50px;
+      height: 50px;
+      margin-top: 10px;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h1>Customizable QR Code Generator</h1>
-  
-  <label for="qrText">Enter Text/URL:</label><br>
-  <input type="text" id="qrText" placeholder="Enter text or URL"><br>
+  <div class="container">
+    <h1>Customizable QR Code Generator</h1>
 
-  <label for="qrSize">QR Code Size (1-10):</label><br>
-  <input type="number" id="qrSize" min="1" max="10" value="5"><br>
+    <!-- Controls for customization -->
+    <div class="controls">
+      <label for="qrText">Enter Text/URL:</label>
+      <input type="text" id="qrText" placeholder="Enter text or URL" oninput="updateQRCode()">
+      
+      <label for="qrColor">QR Code Color:</label>
+      <input type="color" id="qrColor" value="#000000" onchange="updateQRCode()">
 
-  <label for="qrColor">QR Code Color:</label><br>
-  <input type="color" id="qrColor" value="#000000"><br>
+      <label for="qrSize">QR Code Size:</label>
+      <input type="range" id="qrSize" min="1" max="10" value="5" class="slider" onchange="updateQRCode()">
+      <span id="sizeValue">Size: 5</span>
 
-  <label for="logoUpload">Upload Logo (Optional):</label><br>
-  <input type="file" id="logoUpload"><br><br>
+      <label for="logoUpload">Upload Logo (Optional):</label>
+      <input type="file" id="logoUpload" onchange="updateQRCode()">
+      <img id="logoPreview" class="logo-preview" src="" alt="Logo Preview">
+      
+      <button onclick="updateQRCode()">Generate QR Code</button>
+    </div>
 
-  <button onclick="generateQRCode()">Generate QR Code</button>
-
-  <div id="qrcode"></div>
+    <!-- QR Code Preview -->
+    <div id="qrcode"></div>
+  </div>
 
   <script>
-    function generateQRCode() {
+    let qrCode;  // Store QR code instance globally to update it later
+
+    // Function to update the QR code with new parameters
+    function updateQRCode() {
       const text = document.getElementById("qrText").value;
       const size = document.getElementById("qrSize").value;
       const color = document.getElementById("qrColor").value;
       const logoFile = document.getElementById("logoUpload").files[0];
+      
+      // Update size display
+      document.getElementById("sizeValue").innerText = `Size: ${size}`;
 
+      // Clear previous QR code and logo preview
+      document.getElementById("qrcode").innerHTML = "";
+      document.getElementById("logoPreview").style.display = "none";
+
+      // If QR code text is empty, don't generate it
       if (!text) {
-        alert("Please enter some text or a URL.");
         return;
       }
 
-      // Clear previous QR code
-      document.getElementById("qrcode").innerHTML = "";
-
-      // Create QR code options
+      // Create the QR code options
       const options = {
         text: text,
         width: size * 100, // Size multiplier for the QR code
         height: size * 100,
-        colorDark: color,  // Set color of the QR code
-        colorLight: "#ffffff",  // Set background color of the QR code
-        correctLevel: QRCode.CorrectLevel.H,  // Error correction level (high)
+        colorDark: color,  // QR code color
+        colorLight: "#ffffff",  // QR code background color
+        correctLevel: QRCode.CorrectLevel.H,  // High error correction
       };
 
-      // Create QR Code
-      const qrCode = new QRCode(document.getElementById("qrcode"), options);
+      // Generate QR code
+      qrCode = new QRCode(document.getElementById("qrcode"), options);
 
-      // Add logo if uploaded
+      // If logo is uploaded, preview it and add it to QR code
       if (logoFile) {
         const reader = new FileReader();
         reader.onload = function(event) {
           const logoImg = new Image();
           logoImg.src = event.target.result;
+
           logoImg.onload = function() {
             const canvas = document.createElement("canvas");
-            canvas.width = qrCode._oDrawing._elCanvas.width;
-            canvas.height = qrCode._oDrawing._elCanvas.height;
             const ctx = canvas.getContext("2d");
-            
-            // Draw QR code first
-            ctx.drawImage(qrCode._oDrawing._elCanvas, 0, 0);
+            const qrCanvas = qrCode._oDrawing._elCanvas;
 
-            // Draw logo on top of QR code
+            canvas.width = qrCanvas.width;
+            canvas.height = qrCanvas.height;
+            ctx.drawImage(qrCanvas, 0, 0);
+
+            // Add logo on top of QR code
             const logoSize = canvas.width / 5;
             const logoX = (canvas.width - logoSize) / 2;
             const logoY = (canvas.height - logoSize) / 2;
 
             ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
 
-            // Replace the QR code canvas with the canvas that has the logo
+            // Replace the QR code canvas with the logo overlay
             const finalImage = canvas.toDataURL("image/png");
             document.getElementById("qrcode").innerHTML = `<img src="${finalImage}" />`;
           };
         };
         reader.readAsDataURL(logoFile);
+        
+        // Show logo preview
+        document.getElementById("logoPreview").style.display = "block";
+        document.getElementById("logoPreview").src = URL.createObjectURL(logoFile);
       }
     }
   </script>
